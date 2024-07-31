@@ -54,10 +54,10 @@ tetromino_I: .word 0, 0, 0, 0
              .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
- tetronimo_test: .word 0xff0000, 0x00ff00, 0xff0000, 0xff0000
- .word 0xff0000, 0x00ff00, 0x00ff00, 0xff0000
- .word 0xff0000, 0xff0000, 0x00ff00, 0xff0000
- .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
+ # tetronimo_test: .word 0xff0000, 0x00ff00, 0xff0000, 0xff0000
+ # .word 0xff0000, 0x00ff00, 0x00ff00, 0xff0000
+ # .word 0xff0000, 0xff0000, 0x00ff00, 0xff0000
+ # .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
 
 tetromino_J: .word 0x00eeee, 0, 0, 0
              .word 0x00eeee, 0x00eeee, 0x00eeee, 0
@@ -69,18 +69,18 @@ tetromino_L: .word 0, 0, 0xcccc00, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_O: .word 0, 0x0000cc, 0x0000cc, 0
-             .word 0, 0x0000cc, 0x0000cc, 0
+tetromino_O: .word 0, 0xb4e600, 0xb4e600, 0
+             .word 0, 0xb4e600, 0xb4e600, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_S: .word 0, 0xedbfc6, 0xedbfc6, 0
-             .word 0xedbfc6, 0xedbfc6, 0, 0
+tetromino_S: .word 0, 0xff0f7b, 0xff0f7b, 0
+             .word 0xff0f7b, 0xff0f7b, 0, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_T: .word 0, 0x034c3c, 0, 0
-             .word 0x034c3c, 0x034c3c, 0x034c3c, 0
+tetromino_T: .word 0, 0xffbc0a, 0, 0
+             .word 0xffbc0a, 0xffbc0a, 0xffbc0a, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
@@ -93,12 +93,15 @@ START_POINT: .word 12
 
 OFFSET: .word 8
 
+MAX_X: 192
+MAX_Y: 8064
+
+
 ##############################################################################
 # Mutable Data
 ##############################################################################
 
-GRID: .word 0: 160
-
+GRID: .word 0: 200
 
 CURRENT_TETRONIMO: 
             .word 0, 0, 0, 0
@@ -186,28 +189,31 @@ move:
     
     b game_loop
 
-DRAW_WALL: 
-    li $s1, 0xffffff
-    lw $s0, ADDR_DSPL # $t0 = base address for display
-    addi $s2, $s0, 88
-    addi $s3, $s0, 4096 # The bottom wall begining and index
-    addi $s6, $s0, 4192
+ 
+
+
+DRAW_WALL:
+    li $t1, 0xffffff
+    lw $t0, ADDR_DSPL # $t0 = base address for display
+    addi $t2, $t0, 88
+    addi $t3, $t0, 7680 # The bottom wall begining and index    MAX_Y - 384
+    addi $t6, $t0, 7776   #MAX_Y - 384 + 96
     j wall_loop
     
 wall_loop:
-    sw $s1, 0($s0)
-    sw $s1, 0($s2)
-    sw $s1, 4($s0)
-    sw $s1, 4($s2)
-    addi $s0, $s0, 128
-    addi $s2, $s2, 128
-    blt $s0, $s6, wall_loop
+    sw $t1, 0($t0)
+    sw $t1, 0($t2)
+    sw $t1, 4($t0)
+    sw $t1, 4($t2)
+    addi $t0, $t0, 192  # MAX_X
+    addi $t2, $t2, 192 # MAX_X
+    blt $t0, $t6, wall_loop
 
 bottom_loop:
-    sw $s1, 0($s3)
-    sw $s1, 128($s3)
-    addi $s3, $s3, 4
-    blt $s3, $s6, bottom_loop
+    sw $t1, 0($t3)
+    sw $t1, 192($t3)    # MAX_X
+    addi $t3, $t3, 4
+    blt $t3, $t6, bottom_loop
 
 wall_exit:
     jr $ra
@@ -228,7 +234,7 @@ CHECKER_BACKGROUND:
 
     addi $t0, $t0, 8 #So that it starts from the first grid in the playable area
     addi $t3, $t0, 80 #Column end
-    addi $t4, $t0, 3712 # Row end
+    addi $t4, $t0, 7680 # Row end   # MAX_Y - 384
     addi $t7, $zero, 0
     # Row Index
 
@@ -259,10 +265,10 @@ change_again:
 
 row_loop:
     sw $t1, 0($t5)
-    sw $t1, 128($t5)
-    sw $t2, 256($t5)
+    sw $t1, 192($t5)
     sw $t2, 384($t5)
-    addi $t5, $t5, 512
+    sw $t2, 576($t5)
+    addi $t5, $t5, 768
 
     blt $t5, $t4, row_loop
     addi $t0, $t0, 4
@@ -293,7 +299,7 @@ LOAD_TETRONIMO:
     mflo $t1
     add $t1, $t1, $t2
     
-    #la $t1, tetronimo_test
+#    la $t1, tetromino_O
     
     li $t2, 16 # Counter end
     li $t3, 0  # t3 is the index, which is why we can use t value
@@ -359,7 +365,7 @@ DRAW_GRID:
     la $t1, GRID
     
     li $t2, 10 # Row end
-    li $t3, 16 # Grid end
+    li $t3, 20 # Grid end
     
     li $t4, 0 # Row index
     li $t5, 0 # Column index
@@ -370,8 +376,8 @@ inner_loop:    beq $t4, $t2, draw_new_line
     beqz $t6, go_next
     sw $t6, 0($t0)
     sw $t6, 4($t0)
-    sw $t6, 128($t0)
-    sw $t6, 132($t0)
+    sw $t6, 192($t0)
+    sw $t6, 196($t0)
     
 go_next:
     addi $t4, $t4, 1
@@ -381,7 +387,7 @@ go_next:
     
 draw_new_line: 
     addi $t5, $t5, 1
-    addi $t0, $t0 , 176
+    addi $t0, $t0 , 304
     addi $t4, $zero, 0
     j outer_loop
 
@@ -494,7 +500,7 @@ line_loop: beq $t4, $t7, next_collision_line
     bge $t9, $t6, collision_detected
     bltz $t9, collision_detected
     add $t9, $t5, $t2        # Checks y out of bounds
-    addi $t6, $zero, 64
+    addi $t6, $zero, 80
     bge $t9, $t6, collision_detected
     bltz $t9, collision_detected
 
@@ -640,12 +646,13 @@ down_direction: addi $s3, $s2, 4
     j exit_function
     
     addi  $sp, $sp, -4
-    sw $zero, 0($sp)
-    
-    # jal CHECK_LINES    
+    sw $zero, 0($sp)    
 
 new_tetro:
     jal LOAD_GRID
+    
+    jal CHECK_HORIZ_LINES
+    
     jal LOAD_TETRONIMO
 
 exit_function:
@@ -705,5 +712,134 @@ clear_next_line:
 clear_exit:
     jr $ra
     
-CHECK_LINES:
+CHECK_HORIZ_LINES:
+
+    addi $sp, $sp, -4   # Push ra onto the stack first since we are using s registers and nested calls
+    sw $ra, 0($sp)
     
+# Store all the registers in stack
+    
+    addi $sp, $sp, -4
+    sw $s0, 0($sp)
+    
+###############################################
+
+# Now we loop through the lines and use another function to check and clear
+
+    lw $s0, current_y   # Give $s0 current y value
+    
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
+    
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
+    
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
+    
+    jal CHECK_HORIZONTAL_LINE
+    
+    # Now we restore everything back and exit the function since we are done
+
+    lw $s0, 0($sp)
+    addi $sp, $sp, 4
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+CHECK_HORIZONTAL_LINE:
+
+    lw $t0, current_y
+    li $t1, 80
+    
+    # If current y is greater than or equal to 80
+    bge $t0, $t1, exit_check_horizontal
+    
+    li $t1, 10
+    
+    mult $t0, $t1
+    mflo $t0
+    
+    la $t1, GRID
+    add $t0, $t0, $t1   # Now t0 has the address of the line
+    
+    # Now we need to loop through line and see if we find any zeroes
+    
+    li $t1, 0   # Counter that checks if we are done
+    li $t2, 10  # End of counter
+    
+horizontal_loop:
+    beq $t2, $t1, horizontal_line_detected
+    lw $t3, 0($t0)
+    beqz $t3, exit_check_horizontal # Exit as soon as you see a zero
+    addi $t1, $t1, 1
+    addi $t0, $t0, 4
+    j horizontal_loop
+    
+horizontal_line_detected:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    jal CLEAR_HORIZONTAL_LINE
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+exit_check_horizontal:
+    jr $ra
+
+CLEAR_HORIZONTAL_LINE:
+    la  $t0, GRID    
+    
+    lw $t1, current_y
+    li $t2, 10
+    
+    mult $t1, $t2
+    mflo $t1
+    add $t1, $t1, $t0    
+    
+    addi $t2, $t1, -40
+    
+    add $t3, $t1, $zero # Used in internal loop
+    add $t4, $t2, $zero # Used in internal loop
+    
+    addi $t5, $zero, 40 # End for internal loop
+    addi $t6, $zero, 0    # Counter for internal loop
+    
+external_loop: beq $t1, $t0, finish_first_row
+internal_loop: beq $t6, $t5, go_up
+    
+    lw $t7, 0($t4)
+    sw $t7, 0($t3)
+    
+    addi $t3, $t3, 4
+    addi $t4, $t4, 4
+    addi $t6, $t6, 4
+    
+    j internal_loop
+
+go_up:
+    addi $t2, $t2, -40
+    addi $t1, $t1, -40
+    li $t6, 0
+    
+    add $t3, $t1, $zero
+    add $t4, $t2, $zero
+    j external_loop
+
+finish_first_row:
+
+    li $t8, 0
+    li $t9, 40
+
+last_loop:    
+    beq $t8, $t9, exit_clearing
+    sw $zero, 0($t0)
+    addi $t0, $t0, 4
+    addi $t8, $t8, 4
+    j last_loop
+
+exit_clearing:  jr $ra
