@@ -21,7 +21,7 @@
 # 2. (fill in the feature, if any)
 # ... (add more if necessary)
 # Hard Features:
-# 1. (fill in the feature, if any)
+# 1. Implemented all tetronimos
 # 2. (fill in the feature, if any)
 # ... (add more if necessary)
 # How to play:
@@ -59,33 +59,33 @@ tetromino_I: .word 0, 0, 0, 0
  .word 0xff0000, 0xff0000, 0x00ff00, 0xff0000
  .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
 
-tetromino_J: .word 0x00ff00, 0, 0, 0
-             .word 0xff0000, 0xff0000, 0xff0000, 0
+tetromino_J: .word 0x00eeee, 0, 0, 0
+             .word 0x00eeee, 0x00eeee, 0x00eeee, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_L: .word 0, 0, 0xff0000, 0
-             .word 0xff0000, 0xff0000, 0xff0000, 0
+tetromino_L: .word 0, 0, 0xcccc00, 0
+             .word 0xcccc00, 0xcccc00, 0xcccc00, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_O: .word 0, 0xff0000, 0xff0000, 0
-             .word 0, 0xff0000, 0xff0000, 0
+tetromino_O: .word 0, 0x0000cc, 0x0000cc, 0
+             .word 0, 0x0000cc, 0x0000cc, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_S: .word 0, 0xff0000, 0xff0000, 0
-             .word 0xff0000, 0xff0000, 0, 0
+tetromino_S: .word 0, 0xedbfc6, 0xedbfc6, 0
+             .word 0xedbfc6, 0xedbfc6, 0, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_T: .word 0, 0xff0000, 0, 0
-             .word 0xff0000, 0xff0000, 0xff0000, 0
+tetromino_T: .word 0, 0x034c3c, 0, 0
+             .word 0x034c3c, 0x034c3c, 0x034c3c, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_Z: .word 0xff0000, 0xff0000, 0, 0
-             .word 0, 0xff0000, 0xff0000, 0
+tetromino_Z: .word 0x9381ff, 0x9381ff, 0, 0
+             .word 0, 0x9381ff, 0x9381ff, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
@@ -293,7 +293,7 @@ LOAD_TETRONIMO:
     mflo $t1
     add $t1, $t1, $t2
     
-    la $t1, tetronimo_test
+    #la $t1, tetronimo_test
     
     li $t2, 16 # Counter end
     li $t3, 0  # t3 is the index, which is why we can use t value
@@ -638,6 +638,12 @@ down_direction: addi $s3, $s2, 4
     bne $t3, $zero, new_tetro
     sw $s3, current_y
     j exit_function
+    
+    addi  $sp, $sp, -4
+    sw $zero, 0($sp)
+    
+    # jal CHECK_LINES    
+
 new_tetro:
     jal LOAD_GRID
     jal LOAD_TETRONIMO
@@ -698,3 +704,55 @@ clear_next_line:
 
 clear_exit:
     jr $ra
+    
+# CHECK_LINES:
+    # la $t0, GRID    # Load Grid address
+
+    # lw $t9, 0($sp)  # Load the current y offset, which should be maximum of 4 since we will check it function wise
+    # addi $sp, $sp, 4
+    
+    # addi $sp, $sp, -4
+    # sw $ra, 0($sp)  # Store ra in the stack so that we can call other function that shifts everything 
+    
+    # addi $sp, $sp, -4   # Store t9, since we will need this value to call the function again with increment in offset
+    # sw $t9, 0($sp)
+
+    # li $t1, 4
+    # beq $t9, $t1, exit_function
+    
+    # lw $t1, current_y   # Load the current y, we will use this to loop through the entire block to see all the lines that could be cleared
+
+    # li $t2, 10
+    
+    # mult $t2, $t1
+    # mflo $t1
+    
+    # # t1 has the current address now
+    
+    # li $t2, 0   # Temporary value that we will use to find if block is empty
+    
+    # # Now loop through the row to see if we find a zero
+    # li $t3, 0
+    # li $t4, 40
+    
+    # # We can do a recursion where we change the current y since we dont need it
+    # # Correction: We will change current_y to zero anyways since we will load new domino
+    
+# checking_loop:
+        # beq $t3, $t4, clear
+        # lw $t2, 0($t1)
+        # beq $t2, $zero, no_clear
+        # addi $t3, $t3, 4
+        # addi $t1, $t1, 4
+        # j checking_loop
+    
+
+# clear: jal CLEAR_LINE
+
+# no_clear:   lw $t9, 0($sp)
+    # addi $sp, $sp, 4
+
+
+# exit_function:
+    # lw $ra, 0($sp)
+    # addi $sp, $sp, 4
