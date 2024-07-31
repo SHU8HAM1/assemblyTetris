@@ -705,54 +705,5 @@ clear_next_line:
 clear_exit:
     jr $ra
     
-# CHECK_LINES:
-    # la $t0, GRID    # Load Grid address
-
-    # lw $t9, 0($sp)  # Load the current y offset, which should be maximum of 4 since we will check it function wise
-    # addi $sp, $sp, 4
+CHECK_LINES:
     
-    # addi $sp, $sp, -4
-    # sw $ra, 0($sp)  # Store ra in the stack so that we can call other function that shifts everything 
-    
-    # addi $sp, $sp, -4   # Store t9, since we will need this value to call the function again with increment in offset
-    # sw $t9, 0($sp)
-
-    # li $t1, 4
-    # beq $t9, $t1, exit_function
-    
-    # lw $t1, current_y   # Load the current y, we will use this to loop through the entire block to see all the lines that could be cleared
-
-    # li $t2, 10
-    
-    # mult $t2, $t1
-    # mflo $t1
-    
-    # # t1 has the current address now
-    
-    # li $t2, 0   # Temporary value that we will use to find if block is empty
-    
-    # # Now loop through the row to see if we find a zero
-    # li $t3, 0
-    # li $t4, 40
-    
-    # # We can do a recursion where we change the current y since we dont need it
-    # # Correction: We will change current_y to zero anyways since we will load new domino
-    
-# checking_loop:
-        # beq $t3, $t4, clear
-        # lw $t2, 0($t1)
-        # beq $t2, $zero, no_clear
-        # addi $t3, $t3, 4
-        # addi $t1, $t1, 4
-        # j checking_loop
-    
-
-# clear: jal CLEAR_LINE
-
-# no_clear:   lw $t9, 0($sp)
-    # addi $sp, $sp, 4
-
-
-# exit_function:
-    # lw $ra, 0($sp)
-    # addi $sp, $sp, 4
