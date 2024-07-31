@@ -54,10 +54,10 @@ tetromino_I: .word 0, 0, 0, 0
              .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
- tetronimo_test: .word 0xff0000, 0x00ff00, 0xff0000, 0xff0000
- .word 0xff0000, 0x00ff00, 0x00ff00, 0xff0000
- .word 0xff0000, 0xff0000, 0x00ff00, 0xff0000
- .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
+ # tetronimo_test: .word 0xff0000, 0x00ff00, 0xff0000, 0xff0000
+ # .word 0xff0000, 0x00ff00, 0x00ff00, 0xff0000
+ # .word 0xff0000, 0xff0000, 0x00ff00, 0xff0000
+ # .word 0xff0000, 0xff0000, 0xff0000, 0xff0000
 
 tetromino_J: .word 0x00eeee, 0, 0, 0
              .word 0x00eeee, 0x00eeee, 0x00eeee, 0
@@ -93,12 +93,15 @@ START_POINT: .word 12
 
 OFFSET: .word 8
 
+MAX_X: 192
+MAX_Y: 8064
+
+
 ##############################################################################
 # Mutable Data
 ##############################################################################
 
-GRID: .word 0: 160
-
+GRID: .word 0: 200
 
 CURRENT_TETRONIMO: 
             .word 0, 0, 0, 0
@@ -186,28 +189,31 @@ move:
     
     b game_loop
 
-DRAW_WALL: 
-    li $s1, 0xffffff
-    lw $s0, ADDR_DSPL # $t0 = base address for display
-    addi $s2, $s0, 88
-    addi $s3, $s0, 4096 # The bottom wall begining and index
-    addi $s6, $s0, 4192
+ 
+
+
+DRAW_WALL:
+    li $t1, 0xffffff
+    lw $t0, ADDR_DSPL # $t0 = base address for display
+    addi $t2, $t0, 88
+    addi $t3, $t0, 7680 # The bottom wall begining and index    MAX_Y - 384
+    addi $t6, $t0, 7776   #MAX_Y - 384 + 96
     j wall_loop
     
 wall_loop:
-    sw $s1, 0($s0)
-    sw $s1, 0($s2)
-    sw $s1, 4($s0)
-    sw $s1, 4($s2)
-    addi $s0, $s0, 128
-    addi $s2, $s2, 128
-    blt $s0, $s6, wall_loop
+    sw $t1, 0($t0)
+    sw $t1, 0($t2)
+    sw $t1, 4($t0)
+    sw $t1, 4($t2)
+    addi $t0, $t0, 192  # MAX_X
+    addi $t2, $t2, 192 # MAX_X
+    blt $t0, $t6, wall_loop
 
 bottom_loop:
-    sw $s1, 0($s3)
-    sw $s1, 128($s3)
-    addi $s3, $s3, 4
-    blt $s3, $s6, bottom_loop
+    sw $t1, 0($t3)
+    sw $t1, 192($t3)    # MAX_X
+    addi $t3, $t3, 4
+    blt $t3, $t6, bottom_loop
 
 wall_exit:
     jr $ra
@@ -228,7 +234,7 @@ CHECKER_BACKGROUND:
 
     addi $t0, $t0, 8 #So that it starts from the first grid in the playable area
     addi $t3, $t0, 80 #Column end
-    addi $t4, $t0, 3712 # Row end
+    addi $t4, $t0, 7680 # Row end   # MAX_Y - 384
     addi $t7, $zero, 0
     # Row Index
 
@@ -259,10 +265,10 @@ change_again:
 
 row_loop:
     sw $t1, 0($t5)
-    sw $t1, 128($t5)
-    sw $t2, 256($t5)
+    sw $t1, 192($t5)
     sw $t2, 384($t5)
-    addi $t5, $t5, 512
+    sw $t2, 576($t5)
+    addi $t5, $t5, 768
 
     blt $t5, $t4, row_loop
     addi $t0, $t0, 4
@@ -293,7 +299,7 @@ LOAD_TETRONIMO:
     mflo $t1
     add $t1, $t1, $t2
     
-    #la $t1, tetronimo_test
+    la $t1, tetromino_O
     
     li $t2, 16 # Counter end
     li $t3, 0  # t3 is the index, which is why we can use t value
@@ -359,7 +365,7 @@ DRAW_GRID:
     la $t1, GRID
     
     li $t2, 10 # Row end
-    li $t3, 16 # Grid end
+    li $t3, 20 # Grid end
     
     li $t4, 0 # Row index
     li $t5, 0 # Column index
@@ -370,8 +376,8 @@ inner_loop:    beq $t4, $t2, draw_new_line
     beqz $t6, go_next
     sw $t6, 0($t0)
     sw $t6, 4($t0)
-    sw $t6, 128($t0)
-    sw $t6, 132($t0)
+    sw $t6, 192($t0)
+    sw $t6, 196($t0)
     
 go_next:
     addi $t4, $t4, 1
@@ -381,7 +387,7 @@ go_next:
     
 draw_new_line: 
     addi $t5, $t5, 1
-    addi $t0, $t0 , 176
+    addi $t0, $t0 , 304
     addi $t4, $zero, 0
     j outer_loop
 
@@ -494,7 +500,7 @@ line_loop: beq $t4, $t7, next_collision_line
     bge $t9, $t6, collision_detected
     bltz $t9, collision_detected
     add $t9, $t5, $t2        # Checks y out of bounds
-    addi $t6, $zero, 64
+    addi $t6, $zero, 80
     bge $t9, $t6, collision_detected
     bltz $t9, collision_detected
 
@@ -640,12 +646,13 @@ down_direction: addi $s3, $s2, 4
     j exit_function
     
     addi  $sp, $sp, -4
-    sw $zero, 0($sp)
-    
-    # jal CHECK_LINES    
+    sw $zero, 0($sp)    
 
 new_tetro:
     jal LOAD_GRID
+    
+    jal CHECK_HORIZ_LINES
+    
     jal LOAD_TETRONIMO
 
 exit_function:
@@ -705,54 +712,43 @@ clear_next_line:
 clear_exit:
     jr $ra
     
-# CHECK_LINES:
-    # la $t0, GRID    # Load Grid address
+CHECK_HORIZ_LINES:
 
-    # lw $t9, 0($sp)  # Load the current y offset, which should be maximum of 4 since we will check it function wise
-    # addi $sp, $sp, 4
+    addi $sp, $sp, -4   # Push ra onto the stack first since we are using s registers and nested calls
+    sw $ra, 0($sp)
     
-    # addi $sp, $sp, -4
-    # sw $ra, 0($sp)  # Store ra in the stack so that we can call other function that shifts everything 
+# Store all the registers in stack
     
-    # addi $sp, $sp, -4   # Store t9, since we will need this value to call the function again with increment in offset
-    # sw $t9, 0($sp)
+    addi $sp, $sp, -4
+    sw $s0, 0($sp)
+    
+###############################################
 
-    # li $t1, 4
-    # beq $t9, $t1, exit_function
-    
-    # lw $t1, current_y   # Load the current y, we will use this to loop through the entire block to see all the lines that could be cleared
+# Now we loop through the lines and use another function to check and clear
 
-    # li $t2, 10
+    lw $s0, current_y   # Give $s0 current y value
     
-    # mult $t2, $t1
-    # mflo $t1
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
     
-    # # t1 has the current address now
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
     
-    # li $t2, 0   # Temporary value that we will use to find if block is empty
+    jal CHECK_HORIZONTAL_LINE
+    addi $s0, $s0, 4
+    sw $s0, current_y
     
-    # # Now loop through the row to see if we find a zero
-    # li $t3, 0
-    # li $t4, 40
+    jal CHECK_HORIZONTAL_LINE
     
-    # # We can do a recursion where we change the current y since we dont need it
-    # # Correction: We will change current_y to zero anyways since we will load new domino
-    
-# checking_loop:
-        # beq $t3, $t4, clear
-        # lw $t2, 0($t1)
-        # beq $t2, $zero, no_clear
-        # addi $t3, $t3, 4
-        # addi $t1, $t1, 4
-        # j checking_loop
-    
+    # Now we restore everything back and exit the function since we are done
 
-# clear: jal CLEAR_LINE
-
-# no_clear:   lw $t9, 0($sp)
-    # addi $sp, $sp, 4
-
-
-# exit_function:
-    # lw $ra, 0($sp)
-    # addi $sp, $sp, 4
+    lw $s0, 0($sp)
+    addi $sp, $sp, 4
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+CHECK_HORIZONTAL_LINE:
+    jr $ra
