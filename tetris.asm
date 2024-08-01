@@ -64,8 +64,8 @@ tetromino_J: .word 0x00eeee, 0, 0, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
-tetromino_L: .word 0, 0, 0xcccc00, 0
-             .word 0xcccc00, 0xcccc00, 0xcccc00, 0
+tetromino_L: .word 0, 0, 0xf3feb8, 0
+             .word 0xf3feb8, 0xf3feb8, 0xf3feb8, 0
              .word 0, 0, 0, 0
              .word 0, 0, 0, 0
 
@@ -149,7 +149,7 @@ game_loop:
 	# 4. Sleep
 
     #5. Go back to 1
-    
+
     li 		$v0, 32
 	li 		$a0, 1
 	syscall
@@ -157,25 +157,51 @@ game_loop:
     lw $t0, ADDR_KBRD               # $t0 = base address for keyboard
     lw $t8, 0($t0)                  # Load first word from keyboard
     beq $t8, 1, keyboard_input      # If first word 1, key is pressed
-    b game_loop
-
-keyboard_input:                     # A key is pressed
-    lw $a0, 4($t0)                  # Load second word from keyboard
-    beq $a0, 115, down_movement
-    beq $a0, 119, rotate_movement
-    beq $a0, 97, left_movement
-    beq $a0, 100, right_movement
+    
+    # li $v0, 32
+    # li $a0, 800
+    # syscall
+    # j down_movement
     
     b game_loop
 
-down_movement: li $a0, 0
+keyboard_input:                     # A key is pressed
+    lw $a3, 4($t0)                  # Load second word from keyboard
+    beq $a3, 115, down_movement
+    beq $a3, 119, rotate_movement
+    beq $a3, 97, left_movement
+    beq $a3, 100, right_movement
+    beq $a3, 32, drop_block
+    
+    b game_loop
+
+down_movement: li $a1, 0
     j move
-rotate_movement: li $a0, 9
+rotate_movement: li $a1, 9
     j rotate
-right_movement: li $a0, 1
+right_movement: li $a1, 1
     j move
-left_movement: li $a0, -1
+left_movement: li $a1, -1
     j move
+
+drop_block:
+    li $a1, 0
+    jal CHECKER_BACKGROUND
+    jal MOVE_FUNCTION
+    jal DRAW_GRID
+
+    lw $t9, current_y
+    beq $t9, $zero, jump_to_game
+    
+    li $v0, 32
+    li $a0, 50
+    syscall
+    
+    j drop_block
+
+jump_to_game:
+    b game_loop
+
 
 rotate: jal CHECKER_BACKGROUND
     jal ROTATE_TETRONIMO
@@ -186,10 +212,8 @@ move:
     jal CHECKER_BACKGROUND
     jal MOVE_FUNCTION
     jal DRAW_GRID
-    
-    b game_loop
 
- 
+    b game_loop
 
 
 DRAW_WALL:
@@ -539,7 +563,7 @@ MOVE_FUNCTION:
     addi $sp, $sp, -4
     sw $s3, 0($sp)
 
-    move $t0, $a0
+    move $t0, $a1
     la $t9, CURRENT_TETRONIMO
     
     lw $s1, current_x
