@@ -4,22 +4,22 @@
 # Student2: Name, Student Number, UTorID, official email
 #
 # Bitmap Display Configuration:
-# - Unit width in pixels: 4 (update this as needed) 
-# - Unit height in pixels: 4 (update this as needed)
-# - Display width in pixels: 256 (update this as needed)
-# - Display height in pixels: 256 (update this as needed)
+# - Unit width in pixels: 8 (update this as needed) 
+# - Unit height in pixels: 8 (update this as needed)
+# - Display width in pixels: 384 (update this as needed)
+# - Display height in pixels: 336 (update this as needed)
 # - Base Address for Display: 0x10008000 ($gp)
 #
 # Which milestones have been reached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# - Milestone 1/2/3/4/5 (choose the one the applies)
+# - Milestone 4 (choose the one the applies)
 #
 # Which approved features have been implemented?
 # (See the assignment handout for the list of features)
 # Easy Features:
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# ... (add more if necessary)
+# 1. Different color tetronimos
+# 2. Gravity
+# 3. Next tetronimo panel
 # Hard Features:
 # 1. Implemented all tetronimos
 # 2. (fill in the feature, if any)
@@ -30,7 +30,7 @@
 # - (insert YouTube / MyMedia / other URL here). Make sure we can view it!
 #
 # Are you OK with us sharing the video with people outside course staff?
-# - yes / no
+# - yes
 #
 # Any additional information that the TA needs to know:
 # - (write here, if any)
@@ -120,6 +120,14 @@ ROTATED_TETRONIMO:
             .word 0, 0, 0, 0
             .word 0, 0, 0, 0
 
+NEXT_TETRONIMO:
+            .word 0, 0, 0, 0
+            .word 0, 0, 0, 0
+            .word 0, 0, 0, 0
+            .word 0, 0, 0, 0
+
+initial_time: 0
+gravity_speed: 1000
 
 ##############################################################################
 # Code
@@ -136,9 +144,14 @@ main:
     la $t2, tetromino_J
     la $t3, GRID
     jal LOAD_TETRONIMO
+    jal LOAD_TETRONIMO
     jal LOAD_GRID
     jal CHECKER_BACKGROUND
     jal DRAW_GRID
+    li $v0, 30
+    syscall
+    move $t9, $a0
+    sw $t9, initial_time
 
 game_loop:
 	# 1a. Check if key has been pressed
@@ -151,19 +164,29 @@ game_loop:
     #5. Go back to 1
 
     li 		$v0, 32
-	li 		$a0, 1
+	li 		$a0, 20
 	syscall
 
     lw $t0, ADDR_KBRD               # $t0 = base address for keyboard
     lw $t8, 0($t0)                  # Load first word from keyboard
     beq $t8, 1, keyboard_input      # If first word 1, key is pressed
     
+check_time: li $v0, 30
+    syscall
+    move $t9, $a0
+    lw $t7, initial_time
+    
+    sub $t7, $t9, $t7
+    lw $t6, gravity_speed
+    ble $t7, $t6, game_loop
+    
+    sw $t9, initial_time
+    j down_movement
+
     # li $v0, 32
-    # li $a0, 800
+    # li $a0, 500
     # syscall
     # j down_movement
-    
-    b game_loop
 
 keyboard_input:                     # A key is pressed
     lw $a3, 4($t0)                  # Load second word from keyboard
@@ -172,7 +195,7 @@ keyboard_input:                     # A key is pressed
     beq $a3, 97, left_movement
     beq $a3, 100, right_movement
     beq $a3, 32, drop_block
-    
+    beq $a3, 113, game_end
     b game_loop
 
 down_movement: li $a1, 0
@@ -214,6 +237,9 @@ move:
     jal DRAW_GRID
 
     b game_loop
+
+game_end: li $v0, 10
+    syscall
 
 
 DRAW_WALL:
@@ -289,7 +315,7 @@ change_again:
 
 row_loop:
     sw $t1, 0($t5)
-    sw $t1, 192($t5)
+    sw $t1, 192($t5)    #MAX_X
     sw $t2, 384($t5)
     sw $t2, 576($t5)
     addi $t5, $t5, 768
@@ -301,8 +327,24 @@ row_loop:
     
 LOAD_TETRONIMO:
 # WE WILL USE s VALUES SINCE WE ARE USING A NESTED FUNCTION CALL TO ROTATE TO RANDOMIZE THE TETRONIMO GENERATION LATER
+    la $t0, CURRENT_TETRONIMO
+    la $t1, NEXT_TETRONIMO
+    
+    li $t2, 0 # Counter
 
-    la $t0, CURRENT_TETRONIMO # Using s0 to preserve the current_tetronimo since
+current_loading_loop:
+    beq $t2, 16, load_NEXT_TETRONIMO
+    lw $t8, 0($t1)
+    sw $t8, 0($t0)
+    addi $t2, $t2, 1
+    addi $t1, $t1, 4
+    addi $t0, $t0, 4
+    j current_loading_loop
+    
+
+load_NEXT_TETRONIMO: 
+
+    la $t0, NEXT_TETRONIMO # Using s0 to preserve the current_tetronimo since
     # We will randomize it using a function (No need to use function here, but 
     # I have pseudo OCD about stuff)
     
@@ -327,7 +369,6 @@ LOAD_TETRONIMO:
     
     li $t2, 16 # Counter end
     li $t3, 0  # t3 is the index, which is why we can use t value
-    
 
 loading_loop:
     beq $t3, $t2, tetronimo_load_exit
@@ -339,7 +380,43 @@ loading_loop:
     j loading_loop
 
 tetronimo_load_exit:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    jal DRAW_NEXT_TETRONIMO
+
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
     jr $ra
+
+DRAW_NEXT_TETRONIMO:
+    la $t0, NEXT_TETRONIMO
+    lw $t1, ADDR_DSPL
+    
+    li $t2, 0 # To go to the next line
+    li $t9, 0
+    
+    addi $t1, $t1, 1252 # Starting position TAG: MAX_X
+    
+outer_next_tet_loop: beq $t9, 4, exit_draw_next
+inner_next_tet_loop:    beq $t2, 4, draw_next_tet_line
+    lw $t3, 0($t0)
+    sw $t3, 0($t1)
+    sw $t3, 4($t1)
+    sw $t3, 192($t1)
+    sw $t3, 196($t1)
+    addi $t0, $t0, 4
+    addi $t1, $t1, 8
+    addi $t2, $t2, 1
+    j inner_next_tet_loop
+    
+draw_next_tet_line:
+    li $t2, 0
+    addi $t9, $t9, 1
+    addi $t1, $t1, 352
+    j outer_next_tet_loop
+
+exit_draw_next: jr $ra
 
 LOAD_GRID:
     la $t0, CURRENT_TETRONIMO #tetronimo address
